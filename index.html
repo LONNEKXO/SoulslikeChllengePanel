@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Soulslike Games Challenge Board ✨</title>
+  <style>
+    :root{
+      --bg:#070212;
+      --glass: rgba(255,255,255,.08);
+      --border: rgba(255,255,255,.14);
+      --txt: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.68);
+      --shadow: 0 14px 40px rgba(0,0,0,.30);
+      --round: 20px;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      color:var(--txt);
+      background: var(--bg);
+      min-height:100vh;
+      overflow-x:hidden;
+    }
+
+    /* ⭐ Canvas tło — super lekkie */
+    #stars{
+      position:fixed; inset:0; width:100%; height:100%;
+      z-index:0; pointer-events:none;
+      background:
+        radial-gradient(circle at 10% 20%, rgba(255,0,180,.18), transparent 42%),
+        radial-gradient(circle at 80% 30%, rgba(160,60,255,.18), transparent 45%),
+        radial-gradient(circle at 30% 90%, rgba(255,140,230,.12), transparent 48%);
+    }
+
+    /* Delikatne “glow” bez blurów */
+    .glow{
+      position:fixed; inset:-120px;
+      pointer-events:none; z-index:0;
+      background:
+        radial-gradient(420px 420px at 10% 10%, rgba(255,60,210,.22), transparent 60%),
+        radial-gradient(520px 520px at 95% 95%, rgba(150,90,255,.22), transparent 60%),
+        radial-gradient(320px 320px at 85% 18%, rgba(255,160,240,.16), transparent 60%);
+    }
+
+    .wrap{ position:relative; z-index:1; max-width:1200px; margin:0 auto; padding:28px 16px 56px; }
+    header{
+      display:flex; gap:14px; flex-wrap:wrap;
+      align-items:flex-end; justify-content:space-between;
+    }
+    h1{
+      margin:0;
+      font-size: clamp(24px, 3vw, 36px);
+      letter-spacing:-.02em;
+    }
+    .sub{ margin:8px 0 0; color:var(--muted); font-size:14px; max-width:760px; }
+
+    .chips{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .chip, .btn{
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.08);
+      padding:8px 12px; border-radius:999px;
+      font-size:12px; color: rgba(255,255,255,.86);
+      box-shadow: 0 8px 22px rgba(0,0,0,.18);
+      backdrop-filter: blur(10px);
+    }
+    .btn{ cursor:pointer; transition: transform .12s ease, background .12s ease; }
+    .btn:hover{ background: rgba(255,255,255,.12); }
+    .btn:active{ transform: scale(.98); }
+
+    .panel{
+      margin-top:16px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.06);
+      border-radius: 26px;
+      padding:14px;
+      backdrop-filter: blur(14px);
+      box-shadow: var(--shadow);
+    }
+    form{
+      display:grid; gap:12px;
+      grid-template-columns: 1fr 220px 160px;
+      align-items:end;
+    }
+    @media (max-width: 820px){ form{ grid-template-columns: 1fr; } }
+    label{ display:block; font-size:12px; color:var(--muted); margin:0 0 6px; }
+    input, select{
+      width:100%;
+      padding:12px 14px;
+      border-radius: 16px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.28);
+      color: var(--txt);
+      outline:none;
+    }
+    input::placeholder{ color: rgba(255,255,255,.40); }
+
+    .add{
+      border:none;
+      border-radius: 16px;
+      padding:12px 14px;
+      font-weight:900;
+      color:white;
+      cursor:pointer;
+      background: linear-gradient(90deg, rgba(255,60,210,.78), rgba(255,110,210,.70), rgba(150,90,255,.78));
+      box-shadow: 0 14px 40px rgba(255,60,210,.10);
+      transition: transform .12s ease;
+    }
+    .add:active{ transform: scale(.99); }
+
+    .board{
+      margin-top:14px;
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap:12px;
+    }
+    @media (max-width: 1100px){ .board{ grid-template-columns: repeat(2, 1fr);} }
+    @media (max-width: 620px){ .board{ grid-template-columns: 1fr;} }
+
+    .col{
+      border-radius: 26px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.16);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .colhead{
+      padding:12px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      background: linear-gradient(135deg, rgba(255,90,220,.12), rgba(150,70,255,.10));
+    }
+    .coltitle{ font-weight:900; font-size:14px; }
+    .count{
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.10);
+      border-radius:999px; padding:4px 10px; font-size:12px;
+    }
+    .dropzone{
+      padding:12px;
+      display:flex; flex-direction:column; gap:10px;
+      min-height: 220px;
+    }
+    .dropzone.over{
+      outline: 2px solid rgba(255,90,220,.30);
+      outline-offset: -6px;
+      border-radius: 20px;
+    }
+    .empty{
+      border:1px dashed rgba(255,255,255,.16);
+      background: rgba(255,255,255,.05);
+      border-radius: 16px;
+      padding:14px;
+      text-align:center;
+      font-size:12px;
+      color: rgba(255,255,255,.60);
+    }
+
+    .card{
+      border-radius: var(--round);
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.08);
+      padding:12px;
+      box-shadow: 0 10px 26px rgba(0,0,0,.22);
+      transition: transform .12s ease, opacity .12s ease;
+      will-change: transform;
+    }
+    .card:hover{ transform: translateY(-2px); }
+    .card.dragging{ opacity:.6; }
+
+    .row{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+    .title{ font-weight:900; font-size:14px; line-height:1.25; word-break:break-word; }
+    .meta{ margin-top:10px; display:flex; flex-wrap:wrap; gap:8px; }
+    .pill{
+      display:inline-flex; gap:6px; align-items:center;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.10);
+      padding:4px 10px;
+      font-size:12px;
+      color: rgba(255,255,255,.88);
+    }
+    .actions{ display:flex; gap:8px; }
+    .iconbtn{
+      cursor:pointer;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.10);
+      padding:6px 8px;
+      font-size:12px;
+      user-select:none;
+    }
+    .hint{ margin-top:12px; color: rgba(255,255,255,.55); font-size:12px; }
+  </style>
+</head>
+<body>
+  <canvas id="stars"></canvas>
+  <div class="glow"></div>
+
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Soulslike Games Challenge Board ✨</h1>
+        <p class="sub">
+        </p>
+      </div>
+      <div class="chips">
+        <div class="chip" id="totalChip">📦 0 challenge’y</div>
+        <button class="btn" id="resetBtn">Reset (hardcore)</button>
+      </div>
+    </header>
+
+    <div class="panel">
+      <form id="form">
+        <div>
+          <label for="title">Nowy challenge</label>
+          <input id="title" placeholder="np. Malenia: bez healowania (bo czemu nie)" />
+        </div>
+        <div>
+          <label for="diff">Trudność</label>
+          <select id="diff">
+            <option value="easy">Easy</option>
+            <option value="normal" selected>Normal</option>
+            <option value="hard">Hard</option>
+            <option value="pain">PAIN</option>
+            <option value="nohit">NO-HIT</option>
+          </select>
+        </div>
+        <button class="add" type="submit">➕ Dodaj</button>
+      </form>
+    </div>
+
+    <div class="board" id="board"></div>
+  </div>
+
+<script>
+  const STORAGE_KEY = "Soulslike Games_challenges_html_v2_lite";
+
+  const COLS = [
+    { id: "todo", title: "Do zrobienia" },
+    { id: "doing", title: "W trakcie" },
+    { id: "done", title: "Zrobione" },
+    { id: "dropped", title: "Porzucone" },
+  ];
+
+  const DIFF = {
+    easy:   { label:"Easy",   emoji:"🙂" },
+    normal: { label:"Normal", emoji:"😤" },
+    hard:   { label:"Hard",   emoji:"🔥" },
+    pain:   { label:"PAIN",   emoji:"💀" },
+    nohit:  { label:"NO-HIT", emoji:"🗡️" },
+  };
+
+  const $ = (q, el=document) => el.querySelector(q);
+
+  function uid(){ return Math.random().toString(16).slice(2) + Date.now().toString(16); }
+
+  function load(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return null;
+      const data = JSON.parse(raw);
+      if(!data?.items || !data?.columns) return null;
+      return data;
+    }catch{ return null; }
+  }
+  function save(state){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch{} }
+
+  function starter(){
+    const a = [
+      { id: uid(), title:"Margit — tylko parry (bez summonów)", difficulty:"hard", createdAt: Date.now()-86400000*2 },
+      { id: uid(), title:"Boss rush: 3 bossy pod rząd bez levelowania", difficulty:"pain", createdAt: Date.now()-86400000*1 },
+      { id: uid(), title:"Exploracja: 5 katakumb pod rząd (bez mapy)", difficulty:"normal", createdAt: Date.now()-3600000*6 },
+    ];
+    const items = Object.fromEntries(a.map(x=>[x.id,x]));
+    return { items, columns:{ todo:a.map(x=>x.id), doing:[], done:[], dropped:[] } };
+  }
+
+  let state = load() || starter();
+  const board = $("#board");
+
+  // Drag state
+  let dragId = null;
+
+  function totalCount(){ return Object.keys(state.items).length; }
+
+  function findColumnByItem(id){
+    for(const c of Object.keys(state.columns)){
+      if(state.columns[c].includes(id)) return c;
+    }
+    return null;
+  }
+
+  function escapeHtml(s){
+    return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+
+  function render(){
+    board.innerHTML = "";
+    $("#totalChip").textContent = `📦 ${totalCount()} challenge’y`;
+
+    for(const col of COLS){
+      const ids = state.columns[col.id] || [];
+      const items = ids.map(id=>state.items[id]).filter(Boolean);
+
+      const colEl = document.createElement("section");
+      colEl.className = "col";
+
+      const head = document.createElement("div");
+      head.className = "colhead";
+      head.innerHTML = `<div class="coltitle">${col.title}</div><div class="count">${items.length}</div>`;
+
+      const zone = document.createElement("div");
+      zone.className = "dropzone";
+      zone.dataset.col = col.id;
+
+      zone.addEventListener("dragover", (e)=>{ e.preventDefault(); zone.classList.add("over"); });
+      zone.addEventListener("dragleave", ()=> zone.classList.remove("over"));
+      zone.addEventListener("drop", (e)=>{
+        e.preventDefault();
+        zone.classList.remove("over");
+        if(!dragId) return;
+        moveToColumn(dragId, col.id);
+        dragId = null;
+      });
+
+      if(items.length === 0){
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "Pusto… wrzuć tu challenge albo dodaj nowy ✨";
+        zone.appendChild(empty);
+      } else {
+        for(const item of items){
+          zone.appendChild(cardEl(item));
+        }
+      }
+
+      colEl.appendChild(head);
+      colEl.appendChild(zone);
+      board.appendChild(colEl);
+    }
+
+    save(state);
+  }
+
+  function cardEl(item){
+    const meta = DIFF[item.difficulty] || {label:"?", emoji:"✨"};
+    const el = document.createElement("article");
+    el.className = "card";
+    el.draggable = true;
+    el.dataset.id = item.id;
+
+    const date = new Date(item.createdAt).toLocaleDateString();
+    el.innerHTML = `
+      <div class="row">
+        <div class="title">${meta.emoji} ${escapeHtml(item.title)}</div>
+        <div class="actions">
+          <div class="iconbtn" title="Usuń" data-act="del">🗑️</div>
+          <div class="iconbtn" title="Przeciągnij">⠿</div>
+        </div>
+      </div>
+      <div class="meta">
+        <span class="pill">🎚️ ${meta.label}</span>
+        <span class="pill">🕒 ${date}</span>
+      </div>
+    `;
+
+    el.querySelector('[data-act="del"]').addEventListener("click", ()=> removeItem(item.id));
+
+    el.addEventListener("dragstart", (e)=>{
+      dragId = item.id;
+      el.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", item.id);
+    });
+    el.addEventListener("dragend", ()=>{
+      el.classList.remove("dragging");
+      dragId = null;
+      document.querySelectorAll(".dropzone.over").forEach(z=>z.classList.remove("over"));
+    });
+
+    return el;
+  }
+
+  function addItem(title, difficulty){
+    const id = uid();
+    state.items[id] = { id, title, difficulty, createdAt: Date.now() };
+    state.columns.todo.unshift(id);
+    render();
+  }
+
+  function removeItem(id){
+    const col = findColumnByItem(id);
+    if(!col) return;
+    delete state.items[id];
+    state.columns[col] = state.columns[col].filter(x=>x!==id);
+    render();
+  }
+
+  function moveToColumn(itemId, toCol){
+    const fromCol = findColumnByItem(itemId);
+    if(!fromCol) return;
+    state.columns[fromCol] = state.columns[fromCol].filter(x=>x!==itemId);
+    state.columns[toCol].unshift(itemId);
+    render();
+  }
+
+  $("#form").addEventListener("submit", (e)=>{
+    e.preventDefault();
+    const t = $("#title").value.trim();
+    if(!t) return;
+    addItem(t, $("#diff").value);
+    $("#title").value = "";
+    $("#title").focus();
+  });
+
+  $("#resetBtn").addEventListener("click", ()=>{
+    const ok = confirm("Na pewno chcesz wyczyścić całą tablicę? (localStorage poleci 💥)");
+    if(!ok) return;
+    localStorage.removeItem(STORAGE_KEY);
+    state = starter();
+    render();
+  });
+
+  render();
+
+  // ⭐ super lekki canvas z gwiazdkami — rysujemy raz i koniec
+  (function stars(){
+    const c = document.getElementById("stars");
+    const ctx = c.getContext("2d", { alpha:true });
+
+    function resize(){
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      c.width = Math.floor(window.innerWidth * dpr);
+      c.height = Math.floor(window.innerHeight * dpr);
+      c.style.width = "100%";
+      c.style.height = "100%";
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      draw();
+    }
+
+    function draw(){
+      const w = window.innerWidth, h = window.innerHeight;
+      ctx.clearRect(0,0,w,h);
+
+      const count = Math.floor((w*h) / 14000); // mniej = lżej
+      for(let i=0;i<count;i++){
+        const x = Math.random()*w;
+        const y = Math.random()*h;
+        const r = Math.random()*1.6 + 0.2;
+        const a = Math.random()*0.8 + 0.15;
+
+        // losowy “tint” (róż/fiolet)
+        const tint = Math.random();
+        const col = tint < 0.5
+          ? `rgba(255,210,245,${a})`
+          : `rgba(210,195,255,${a})`;
+
+        ctx.beginPath();
+        ctx.fillStyle = col;
+        ctx.arc(x,y,r,0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+
+    window.addEventListener("resize", resize, { passive:true });
+    resize();
+  })();
+</script>
+</body>
+</html>
